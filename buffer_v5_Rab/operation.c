@@ -17,13 +17,13 @@ void Set_buffer_dutycycle(float M)
 
     duty_cycle1 = 0.5*(1+M);
 
-    if (duty_cycle1 > 0.98)
+    if (duty_cycle1 > duty_max)
     {
-        duty_cycle1 = 0.98;
+        duty_cycle1 = duty_max;
     }
-    else if (duty_cycle1 < 0.02)
+    else if (duty_cycle1 < duty_min)
     {
-        duty_cycle1 = 0.02;
+        duty_cycle1 = duty_min;
 
     }
 

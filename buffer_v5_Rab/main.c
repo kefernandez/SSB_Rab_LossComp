@@ -133,24 +133,15 @@ interrupt void ADC_interrupt1(void)
     lpf_out = b0_lpf*lpf_in + b1_lpf*lpf_in1 - (a1_lpf*lpf_out1);
     Vc2_avg_V = lpf_out;
 
-    /*lpf_c1_in = Vc1_V;
+    lpf_c1_in = Vc1_V;
     lpf_c1_out = b0_c1_lpf*lpf_c1_in + b1_c1_lpf*lpf_c1_in1 - (a1_c1_lpf*lpf_c1_out1);
-    Vc1_avg_V = lpf_c1_out;*/
+    Vc1_avg_V = lpf_c1_out;
 
     /*lpf_vbus_in = Vbus_V;
     lpf_vbus_out = b0_vbus_lpf*lpf_vbus_in + b1_vbus_lpf*lpf_vbus_in1 - (a1_vbus_lpf*lpf_vbus_out1);
     Vbus_avg_V = lpf_vbus_out;*/
 
     Vc3_V = Vbus_V - Vc1_V;
-
-    // Notch (band-stop) filter Vc1 (in volts) in order to band-pass filter 120Hz component
-    notch_in = Vc1_V;
-    notch_out = b0_notch*notch_in + b1_notch*notch_in1 + b2_notch*notch_in2 - (a1_notch*notch_out1 + a2_notch*notch_out2);
-    Vc1_notch_V = (float) notch_out;
-    Vc1_bpf_V = Vc1_V - Vc1_notch_V;
-
-    //Vc3_ref_V = -Vc1_bpf_V; // Control equation (without Vc2 compensation)
-
 
     // Establish a control mode state to help controller escape from initialization (zero) state.
     // This is a hysteresis comparator band to determine:
@@ -169,10 +160,98 @@ interrupt void ADC_interrupt1(void)
         // Do nothing.
     }
 
+    // Notch (band-stop) filter Vc1 (in volts) in order to band-pass filter 120Hz component
+    /*notch_in = Vc1_V;
+    notch_out = b0_notch*notch_in + b1_notch*notch_in1 + b2_notch*notch_in2 - (a1_notch*notch_out1 + a2_notch*notch_out2);
+    Vc1_notch_V = (float) notch_out;
+    Vc1_bpf_V = Vc1_V - Vc1_notch_V;*/
+
+
+    sogi_out2 = sogi_out1;
+    sogi_out1 = sogi_out;
+    sogi_in2 = sogi_in1;
+    sogi_in1 = sogi_in;
+    sogi_in = Vc1_V;
+
+
+    sogi_out = b0_sogi*sogi_in + b2_sogi*sogi_in2 - (-a1_sogi*sogi_out1 + -a2_sogi*sogi_out2);
+
+
+    Vc1_bpf_V = sogi_out;
+
+    /*notch_out2_pll_120 = notch_out1_pll_120;
+    notch_out1_pll_120 = notch_out_pll_120;
+    notch_in2_pll_120 = notch_in1_pll_120;
+    notch_in1_pll_120 = notch_in_pll_120;*/
+
+    notch_out2_pll_240 = notch_out1_pll_240;
+    notch_out1_pll_240 = notch_out_pll_240;
+    notch_in2_pll_240 = notch_in1_pll_240;
+    notch_in1_pll_240 = notch_in_pll_240;
+
+   notch_in_pll_240 = __cospuf32(theta)*(Vc1_bpf_V); //input to the notch is sin(wt)*cos(wt+x)
+    //notch_out_pll_120 = b0_notch_pll_120*notch_in_pll_120 + b1_notch_pll_120*notch_in1_pll_120 + b2_notch_pll_120*notch_in2_pll_120 - (a1_notch_pll_120*notch_out1_pll_120 + a2_notch_pll_120*notch_out2_pll_120);
+    //notch_in_pll_240 = notch_out_pll_120;
+    notch_out_pll_240 = b0_notch_pll_240*notch_in_pll_240 + b1_notch_pll_240*notch_in1_pll_240 + b2_notch_pll_240*notch_in2_pll_240 - (a1_notch_pll_240*notch_out1_pll_240 + a2_notch_pll_240*notch_out2_pll_240);
+    notch_out_pll = notch_out_pll_240;
+
+    x_sum_pll = x_sum_pll+Ki_pll*notch_out_pll;
+    if(reset_pll)
+    {
+        x_sum_pll = 0;
+        theta = 0;
+        reset_pll = 0;
+    }
+    if (fabs(x_sum_pll) > sum_pll_max)
+       x_sum_pll = sum_pll_set;
+    //the pi loop is driving the output of the notch filter to zero
+    pll_PI_out = Kp_pll*notch_out_pll+x_sum_pll;
+    // determined unfolder gating signal
+    theta_pre = theta;
+    theta = theta + (0.00000625)*(120+pll_PI_out); //the pll_PI_out will catch up the phase of the ac voltage
+    //------ PLL ---- //
+
+    if ((theta)>=1)
+        theta = theta - 1;
+    else if (theta<0)
+        theta = theta + 1;
+
+
+    if( ((theta + delta) > 0.249) && ((theta + delta) < 0.251) ) //if theta = pi/2, get maximum
+     {
+         Vc3_max_hold_V_pll = Vc1_V;
+         //Vc3_rip_V = Vc3_max_hold_V_pll - Vc3_min_hold_V_pll;
+     }
+     else if( ((theta + delta) > 0.749) && ((theta + delta) < 0.751) ) //if theta = 3*pi/2, get minimum
+     {
+         Vc3_min_hold_V_pll = Vc1_V;
+     }
+
+     else if( ((theta + delta) < 0.01 ) || ( ((theta + delta) > 0.499 ) && ((theta + delta) < 0.501 )) ) //zero crossing, update reference amplitude for Vab
+     {
+         Vc3_rip_V = Vc3_max_hold_V_pll - Vc3_min_hold_V_pll;
+     }
+     else{
+         //do nothing
+     }
+     Vc1_bpf_V = 0.5*Vc3_rip_V*(__sinpuf32(theta+delta));
+
+
+
+    //------SOGI PLL ---- //
+    /*sogi_out2 = sogi_out1;
+    sogi_out1 = sogi_out;
+    sogi_in2 = sogi_in1;
+    sogi_in1 = sogi_in;
+    sogi_in = Vc1_V;
+    sogi_out = b0_sogi*sogi_in + b2_sogi*sogi_in2 - (-a1_sogi*sogi_out1 + -a2_sogi*sogi_out2);
+    Vc1_bpf_V = sogi_out;
+*/
+
     // Determine the peak value of Vc3 over one cycle.
     // Absolute value function. Increases the bandwidth of the maximum point detection by a factor of 2.
     Vc3_abs_V = -Vc1_bpf_V;
-    if (Vc3_V < 0) Vc3_abs_V = -1*Vc3_abs_V;
+    if (Vc3_abs_V < 0) Vc3_abs_V = -1*Vc3_abs_V;
 
     // First logical detects the zero crossing. If Vc3_meas*Vc3_prev is negative, this implies a change in sign.
     // Second logical implement a debounce-type functionality (wait a certain amount of time before entering again around the zero-crossing with a reasonable bandwidth).
@@ -200,26 +279,21 @@ interrupt void ADC_interrupt1(void)
     {
         // Set the Vc2 reference to a predetermined fixed value (20 V)
         Vc2_ref_V = Vc2_ref_init_V; //Vc2_ref = 10V
-        // Set the PI coefficients
-        //kp_PI = 1E-5;
-        //ki_PI = 1E-5;
+
     }
     else if (control_mode == controlmode_dynamic)
     {
         // Set the Vc2 reference to dynamically adjust based off of the ripple magnitude of Vc3. This is a workaround for estimating the present load.
 
-        Vc2_ref_V = 1.32*Vc3_max_hold_V; // Scaled
-        //      kp_PI = 1E-5;
-        //      ki_PI = 1E-4;
+        Vc2_ref_V = 1.32*Vc3_rip_V*0.5; // Scaled
+       // Vc2_ref_V = 1.32*Vc3_max_hold_V;
+
     }
     else
     {
         // Do nothing.
     }
 
-
-
-    //Vc2_ref_V = 1.32*Vc3_max_hold_V
     // Place Vc2 compensation feedback loop here. Implemented with PI controller
     Vc2_error = Vc2_ref_V - Vc2_avg_V; // Compute error term of Vc2 (average Vc2). Note: In units of volts
     Vc2_integral = a2_I*Vc2_integral_old + b1_I*Vc2_error + b2_I*Vc2_error_old;
@@ -233,35 +307,12 @@ interrupt void ADC_interrupt1(void)
     // Place differentiator for Vc1_bpf here. Implemented with band-limited differentiator.
     Vc1_bpf_diff_V = a2_diff*Vc1_bpf_diff_V_old + b1_diff*Vc1_bpf_V + b2_diff*Vc1_bpf_V_old;
 
-    // Derive the full compensation term for Vc2
-    if (enable_Vc2comp == enable_Vc2comp_true)
-        {
-            dVc2_comp = K*Vc1_bpf_diff_V;
-        }
-    else
-        {
-            dVc2_comp = 0;
-        }
 
-    //  Vc3_ref_V = -Vc1_bpf_V; // Control equation (without Vc2 compensation)
+    dVc2_comp = K*Vc1_bpf_diff_V; // Derive the full compensation term for Vc2
+
     Vc3_ref_V = -Vc1_bpf_V + dVc2_comp; // Control equation (with Vc2 compensation)
-
-        // From the determined converter control mode (fixed or dynamic), calculate the conversion ratio.
-    if (control_mode == controlmode_fixed)
-        {
-    //      M_control = 1;
-            //M_control = Vc3_ref_V*Vc2_ref_init_V_div;   // Desired conversion ratio of converter, Vout/Vin = Vc3/Vc2 (fixed Vc2_ref)
-            M_control = Vc3_ref_V/Vc2_V;
-        }
-    else if (control_mode == controlmode_dynamic)
-        {
-            M_control = Vc3_ref_V/Vc2_V;        // Desired conversion ratio of converter, Vout/Vin = Vc3/Vc2 (measured Vc2_ref)
-
-        }
-     else
-        {
-            // Do nothing.
-        }
+    //Vc3_ref_V = -0.5*Vc3_rip_V*(__sinpuf32(theta+delta)) + dVc2_comp;
+    M_control = Vc3_ref_V/Vc2_V;  // Desired conversion ratio of converter, Vout/Vin = Vc3/Vc2 (measured Vc2_ref)
 
 
     Set_buffer_dutycycle(M_control); // Set the new duty cycles for the converter. Saturation is included.
@@ -270,10 +321,10 @@ interrupt void ADC_interrupt1(void)
     Vc2_error_old = Vc2_error;
     Vc2_integral_old = Vc2_integral;
     Vc1_bpf_V_old = Vc1_bpf_V;
-    notch_out2 = notch_out1;
+    /*notch_out2 = notch_out1;
     notch_out1 = notch_out;
     notch_in2 = notch_in1;
-    notch_in1 = notch_in;
+    notch_in1 = notch_in;*/
     lpf_out1 = lpf_out;
     lpf_in1 = lpf_in;
     lpf_c1_out1 = lpf_c1_out;

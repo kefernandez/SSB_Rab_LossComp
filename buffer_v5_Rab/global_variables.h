@@ -99,7 +99,7 @@ extern float b2_diff;
 extern float Vc1_bpf_diff_V;
 extern float Vc1_bpf_diff_V_old;
 
-extern float32 b0_notch;
+/*extern float32 b0_notch;
 extern float32 b1_notch;
 extern float32 b2_notch;
 extern float32 a1_notch;
@@ -109,7 +109,7 @@ extern float32 notch_out1;
 extern float32 notch_out;
 extern float32 notch_in2;
 extern float32 notch_in1;
-extern float32 notch_in;
+extern float32 notch_in;*/
 extern float Vc1_notch_V;
 
 extern float w_lpf;
@@ -178,5 +178,69 @@ extern float duty_test;
 
 extern Uint32 mov_avg_size;
 extern float mov_avg_size_div;
+
+// pll loop variables
+// notch filter
+/*extern float32 notch_in_pll_120;
+extern float32 notch_in1_pll_120; //x[n-1]
+extern float32 notch_in2_pll_120;
+extern float32 notch_out_pll_120;
+extern float32 notch_out1_pll_120;
+extern float32 notch_out2_pll_120;
+*/
+
+extern float32 notch_in_pll_240;
+extern float32 notch_in1_pll_240; //x[n-1]
+extern float32 notch_in2_pll_240;
+extern float32 notch_out_pll_240;
+extern float32 notch_out1_pll_240;
+extern float32 notch_out2_pll_240;
+/*
+extern float32 b0_notch_pll_120;
+extern float32 b1_notch_pll_120;
+extern float32 b2_notch_pll_120;
+extern float32 a1_notch_pll_120;
+extern float32 a2_notch_pll_120;
+*/
+extern float32 b0_notch_pll_240;
+extern float32 b1_notch_pll_240;
+extern float32 b2_notch_pll_240;
+extern float32 a1_notch_pll_240;
+extern float32 a2_notch_pll_240;
+
+extern float32 notch_out_pll;
+
+// PI controller
+extern float32 Kp_pll;
+extern float32 Ki_pll;
+extern float32 x_sum_pll;
+extern float32 pll_PI_out;
+extern float32 theta;
+extern float32 theta_pre;
+
+extern float32 sum_pll_set;
+extern float32 sum_pll_max;
+extern float32 theta_rad;
+extern int reset_pll;
+extern float delta;
+
+extern float Vc3_max_hold_V_pll;
+extern float Vc3_min_hold_V_pll;
+extern float Vc3_rip_V;
+
+extern float sogi_out2;
+extern float sogi_out1;
+extern float sogi_out;
+extern float sogi_in2;
+extern float sogi_in1;
+extern float sogi_in;
+
+extern float a1_sogi;
+extern float a2_sogi;
+extern float b0_sogi;
+extern float b2_sogi;
+
+extern float duty_max;
+extern float duty_min;
 
 #endif /* GLOBAL_VARIABLES_H_ */

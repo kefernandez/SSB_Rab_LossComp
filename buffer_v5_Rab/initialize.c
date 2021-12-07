@@ -67,7 +67,7 @@ void Init_global_variables()
     enable_Vc2comp = enable_Vc2comp_false;
 
     // Set default Vc2 reference value;
-    Vc2_ref_init_V = 10.00; // Set the Vc2 reference voltage (full volts).
+    Vc2_ref_init_V = 8.00; // Set the Vc2 reference voltage (full volts).
                             // Note: 409.6 counts ideally corresponds to 10V with a 100V max (10V/100V * 4096) but experimentally 290 is better.
     Vc2_ref_V = Vc2_ref_init_V; // Set the Vc2 reference to the initialized value.
 
@@ -84,8 +84,8 @@ void Init_global_variables()
     float T = sampling_period_s; // Shorthand notation for sampling period
 
     // PI controller coefficients & limits
-    kp_PI = 1E-5;
-    ki_PI = 1E-4;
+    kp_PI = 1E-3;
+    ki_PI = 3E-3;
     Vc2_integral_limit = 0.9;
 
     // Difference equation coefficients: integral controller. u(n) = b1*e(n) + b2*e(n-1) + a2*u(n-1)
@@ -140,7 +140,7 @@ void Init_global_variables()
         a1_notch = -1.99903083954455;
         a2_notch = 0.999053258116470;
 
-*/
+
     // Q = 10, fs = 160 kHz, fm = 120.8 Hz
         b0_notch = 0.999762865996079;
         b1_notch = -1.99950323368574;
@@ -148,6 +148,41 @@ void Init_global_variables()
         a1_notch = -1.99950323368574;
         a2_notch = 0.999525731992159;
 
+
+    b0_notch_pll_120 = 0.998823288491100;
+    b1_notch_pll_120 = -1.99762439654412;
+    b2_notch_pll_120 = 0.998823288491100;
+    a1_notch_pll_120 = -1.99762439654412;
+    a2_notch_pll_120 = 0.997646576982199;
+
+    b0_notch_pll_240 = 0.997649339772466;
+    b1_notch_pll_240 = -1.99521006256207;
+    b2_notch_pll_240 = 0.997649339772466;
+    a1_notch_pll_240 = -1.99521006256207;
+    a2_notch_pll_240 = 0.995298679544933;*/
+
+    //Q = 5, fs = 160kHz
+   /* b0_notch_pll_120 = 0.999528983028615;
+    b1_notch_pll_120 = -1.99903576994809;
+    b2_notch_pll_120 = 0.999528983028615;
+    a1_notch_pll_120 = -1.99903576994809;
+    a2_notch_pll_120 = 0.999057966057229;*/
+
+    b0_notch_pll_240 = 0.999058409353407;
+    b1_notch_pll_240 = -1.99802807656224;
+    b2_notch_pll_240 = 0.999058409353407;
+    a1_notch_pll_240 = -1.99802807656224;
+    a2_notch_pll_240 = 0.998116818706814;
+
+    float k_sogi = 0.2;
+    float wn_pll = 2*3.14159265358979323846*120.0;
+    float x_sogi = 2*k_sogi*wn_pll*T;
+    float y_sogi = wn_pll*wn_pll*T*T;
+
+    b0_sogi = x_sogi/(x_sogi+y_sogi+4);
+    b2_sogi = -x_sogi/(x_sogi+y_sogi+4);
+    a1_sogi = (8-2*y_sogi)/(x_sogi+y_sogi+4);
+    a2_sogi = (x_sogi-y_sogi-4)/(x_sogi+y_sogi+4);
 
     // First-order LPF cut-off frequency
     w_lpf = 80;
@@ -157,7 +192,7 @@ void Init_global_variables()
     b1_lpf = b0_lpf;
     a1_lpf = (w_lpf*T - 2)/(w_lpf*T + 2);
 
-    w_c1_lpf = 2*3.14*10000;
+    w_c1_lpf = 60;
     b0_c1_lpf = w_c1_lpf*T/(w_c1_lpf*T + 2);
     b1_c1_lpf = b0_c1_lpf;
     a1_c1_lpf = (w_c1_lpf*T - 2)/(w_c1_lpf*T + 2);
